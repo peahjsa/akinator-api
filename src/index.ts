@@ -1,8 +1,11 @@
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import { cors } from "hono/cors";
 import { Akinator, Language } from "akinatorjs";
 
 const app = new Hono();
+app.use('*', cors({ origin: (origin) => origin || '*', allowMethods: ['GET', 'POST', 'OPTIONS'], allowHeaders: ['Content-Type'] }));
+app.get('/', (c) => c.json({ status: 'ok', service: 'NitroArcade Akinator API' }));
 
 type LanguageKey =
     | "en"
@@ -109,10 +112,11 @@ app.post("/answer", async (c) => {
     return c.json(result);
 });
 
-const port = 3000;
+const port = Number(process.env.PORT) || 10000;
 console.log(`Server is running on port ${port}`);
 
 serve({
     fetch: app.fetch,
-    port
+    port,
+    hostname: '0.0.0.0'
 });
