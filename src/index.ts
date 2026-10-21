@@ -40,6 +40,32 @@ const choices: Record<string, Answers> = {
   "3": Answers.Probably, "probably": Answers.Probably, "p": Answers.Probably,
   "4": Answers.ProbablyNot, "probablynot": Answers.ProbablyNot, "probably not": Answers.ProbablyNot, "pn": Answers.ProbablyNot
 };
+app.get("/diagnose", async (c) => {
+  const checks = [];
+  for (const host of ["https://en.akinator.com/", "https://en.akinator.com/game"]) {
+    try {
+      const response = await fetch(host, {
+        redirect: "follow",
+        signal: AbortSignal.timeout(12000),
+        headers: { "Accept": "text/html", "User-Agent": "Mozilla/5.0" }
+      });
+      const html = await response.text();
+      checks.push({
+        url: host,
+        status: response.status,
+        finalUrl: response.url,
+        contentType: response.headers.get("content-type"),
+        title: html.match(/<title[^>]*>([^<]*)<\/title>/i)?.[1]?.slice(0, 120) ?? null,
+        hasSession: /name=["']session["']/i.test(html),
+        hasSignature: /name=["']signature["']/i.test(html),
+        appearsBlocked: /captcha|access denied|forbidden|cloudflare|blocked|challenge/i.test(html.slice(0, 20000))
+      });
+    } catch (error) {
+      checks.push({ url: host, error: error instanceof Error ? error.message : String(error) });
+    }
+  }
+  return c.json({ service: "NitroArcade Akinator", checks });
+});
 app.post("/start-game", async (c) => {
   try {
     const body = await c.req.json();
